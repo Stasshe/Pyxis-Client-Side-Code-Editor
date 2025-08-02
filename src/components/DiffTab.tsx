@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import { DiffEditor, Monaco } from '@monaco-editor/react';
+import CompareTargetSelector from './CompareTargetSelector';
+import type { FileItem } from '@/types';
 
 interface DiffTabProps {
   originalContent: string;
   modifiedContent: string;
   originalFileName: string;
   modifiedFileName: string;
-  // 比較先候補ファイルリスト（オプション）
-  candidateFiles?: { name: string; content: string }[];
+  projectFiles: FileItem[]; // FileItem型の階層構造
 }
 
 const DiffTab: React.FC<DiffTabProps> = ({
@@ -16,58 +17,40 @@ const DiffTab: React.FC<DiffTabProps> = ({
   modifiedContent,
   originalFileName,
   modifiedFileName,
-  candidateFiles = []
+  projectFiles
 }) => {
   const { colors } = useTheme();
   const [selectedContent, setSelectedContent] = useState(modifiedContent || '');
   const [selectedName, setSelectedName] = useState(modifiedFileName || '');
-  const [inputMode, setInputMode] = useState<'select' | 'text'>('select');
-
   const showSelectUI = !selectedContent;
 
+  // projectFilesをpropsで受け取る前提（FileItem型の階層構造）
+  // candidateFilesにはprojectFilesをそのまま渡す
+  // candidateFilesをFileItem型に変換
+  // page.tsxのFileSelectModalと同じく、FileItem型の階層構造（projectFilesなど）をそのまま渡す
   return (
-    <div className="p-4 overflow-auto h-full w-full">
-      <div className="font-bold text-lg mb-2">
-        差分表示
+    <div className="flex flex-col h-full w-full bg-background">
+      <div className="px-4 pt-2 pb-1 border-b flex items-center gap-2" style={{ minHeight: 36 }}>
+        <span className="font-bold text-sm" style={{ color: colors.foreground }}>差分</span>
+        <span className="text-xs" style={{ color: colors.mutedFg }}>
+          <span style={{ fontWeight: 'bold', color: '#e06c75' }}>{originalFileName}</span>
+          {' '}→{' '}
+          <span style={{ fontWeight: 'bold', color: '#98c379' }}>{selectedName || modifiedFileName}</span>
+        </span>
       </div>
-      <div className="mb-2 text-sm" style={{ color: colors.mutedFg }}>
-        <span style={{ fontWeight: 'bold', color: '#e06c75' }}>{originalFileName}</span>
-        {' '}→{' '}
-        <span style={{ fontWeight: 'bold', color: '#98c379' }}>{selectedName || modifiedFileName}</span>
+      <div className="px-4 py-1 border-b bg-muted" style={{ minHeight: 0 }}>
+        <CompareTargetSelector
+          originalFileName={originalFileName}
+          originalContent={originalContent}
+          candidateFiles={projectFiles}
+          // gitHistoryは親で用意して渡す必要あり
+          onSelect={(name, content) => {
+            setSelectedContent(content);
+            setSelectedName(name);
+          }}
+        />
       </div>
-      {showSelectUI ? (
-        <div className="mb-4">
-          <div className="mb-2 text-xs">比較先を選択してください：</div>
-          <div className="flex gap-2 mb-2">
-            <button className={`px-2 py-1 rounded ${inputMode === 'select' ? 'bg-accent text-white' : 'bg-muted'}`} onClick={() => setInputMode('select')}>ファイルから選択</button>
-            <button className={`px-2 py-1 rounded ${inputMode === 'text' ? 'bg-accent text-white' : 'bg-muted'}`} onClick={() => setInputMode('text')}>テキスト入力</button>
-          </div>
-          {inputMode === 'select' ? (
-            <div className="max-h-40 overflow-auto border rounded p-2 bg-muted">
-              {candidateFiles.length === 0 && <div className="text-xs text-muted-foreground">候補ファイルがありません</div>}
-              {candidateFiles.map(f => (
-                <div key={f.name} className="mb-1 flex items-center gap-2">
-                  <button className="px-2 py-1 text-xs bg-primary text-white rounded" onClick={() => { setSelectedContent(f.content); setSelectedName(f.name); }}>
-                    {f.name}
-                  </button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div>
-              <textarea
-                className="w-full border rounded p-2 text-sm bg-muted"
-                rows={6}
-                placeholder="比較先のテキストを入力..."
-                value={selectedContent}
-                onChange={e => { setSelectedContent(e.target.value); setSelectedName('手入力'); }}
-              />
-              <button className="mt-2 px-3 py-1 bg-primary text-white rounded" onClick={() => setSelectedName('手入力')}>この内容で比較</button>
-            </div>
-          )}
-        </div>
-      ) : null}
-      <div style={{ height: 'calc(100vh - 120px)' }}>
+      <div className="flex-1 min-h-0" style={{ minHeight: 0 }}>
         <DiffEditor
           height="100%"
           theme="pyxis-custom"

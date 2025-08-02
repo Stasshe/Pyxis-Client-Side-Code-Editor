@@ -284,13 +284,8 @@ export default function CodeEditor({
 
   // Diffタブの場合はDiffTabコンポーネントで表示
   if (activeTab.diff) {
-    // 比較候補ファイルリストを取得（propsで渡す）
-    // projectFilesはグローバルで持っていないのでwindow経由で一時取得
-    let candidateFiles: { name: string; content: string }[] = [];
-    try {
-      // window.projectFilesはpage.tsxでグローバルにセットしておくと良い
-      candidateFiles = (window as any).projectFiles?.map((f: any) => ({ name: f.name, content: f.content || '' })) || [];
-    } catch {}
+    // projectFilesはpage.tsxでwindowにセット済み
+    const projectFiles = (window as any).projectFiles || [];
     return (
       <div className="flex-1" style={{ height: editorHeight }}>
         <DiffTab
@@ -298,7 +293,7 @@ export default function CodeEditor({
           modifiedContent={(activeTab as any).modifiedContent || ''}
           originalFileName={(activeTab as any).originalFileName || '保存済み'}
           modifiedFileName={(activeTab as any).modifiedFileName || '現在'}
-          candidateFiles={candidateFiles}
+          projectFiles={projectFiles}
         />
       </div>
     );
