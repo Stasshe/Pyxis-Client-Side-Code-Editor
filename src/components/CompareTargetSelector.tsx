@@ -26,8 +26,8 @@ const CompareTargetSelector: React.FC<CompareTargetSelectorProps> = ({
   // projectFilesからファイルリスト生成
   const fileOptions = candidateFiles ? candidateFiles.filter(f => f.type === 'file').map(f => f.path) : [];
   // originalFileNameがfileOptionsに含まれていればそれを初期値に
-  const initialGitFile = (originalFileName && fileOptions.includes(originalFileName)) ? originalFileName : (fileOptions[0] || '');
-  const [selectedGitFile, setSelectedGitFile] = useState<string>(initialGitFile);
+  const [selectedGitFile, setSelectedGitFile] = useState<string>(originalFileName);
+  const [selectedContent, setSelectedContent] = useState<string>(originalContent);
   const [gitFileHistory, setGitFileHistory] = useState<{ commit: string; content: string }[]>([]);
 
   useEffect(() => {
@@ -80,6 +80,8 @@ const CompareTargetSelector: React.FC<CompareTargetSelectorProps> = ({
           onClose={() => setShowFileModal(false)}
           files={candidateFiles}
           onFileSelect={file => {
+            setSelectedGitFile(file.path);
+            setSelectedContent(file.content ?? '');
             onSelect(file.name ?? '', file.content ?? '');
             setShowFileModal(false);
           }}
@@ -157,7 +159,12 @@ const CompareTargetSelector: React.FC<CompareTargetSelectorProps> = ({
                           color: colors.background,
                           border: `1px solid ${colors.border}`,
                         }}
-                        onClick={() => { onSelect(h.commit, h.content); setShowGitPanel(false); }}
+                        onClick={() => {
+                          setSelectedGitFile(selectedGitFile);
+                          setSelectedContent(h.content);
+                          onSelect(selectedGitFile, h.content);
+                          setShowGitPanel(false);
+                        }}
                       >
                         この内容と比較
                       </button>

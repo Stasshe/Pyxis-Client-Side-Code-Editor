@@ -22,8 +22,9 @@ const DiffTab: React.FC<DiffTabProps> = ({
   currentProject
 }) => {
   const { colors } = useTheme();
-  const [selectedContent, setSelectedContent] = useState(modifiedContent || '');
-  const [selectedName, setSelectedName] = useState(modifiedFileName || '');
+  // 初期値をpropsから受け取る
+  const [selectedContent, setSelectedContent] = useState<string>(modifiedContent);
+  const [selectedName, setSelectedName] = useState<string>(modifiedFileName);
 
   // projectFilesをpropsで受け取る前提（FileItem型の階層構造）
   // candidateFilesにはprojectFilesをそのまま渡す
