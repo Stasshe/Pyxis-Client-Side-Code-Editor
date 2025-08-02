@@ -16,12 +16,14 @@ import {
 import { GitCommit as GitCommitType } from '@/types/git';
 import { GitCommands } from '@/utils/cmd/git';
 import { useTheme } from '../context/ThemeContext';
+import { FileItem } from '@/types';
 
 interface GitHistoryProps {
   commits: GitCommitType[];
   currentProject?: string;
   currentBranch: string;
   onFileOperation?: (path: string, type: 'file' | 'folder' | 'delete', content?: string) => Promise<void>;
+  onOpenDiffTab?: (file: FileItem, originalContent: string) => void;
 }
 
 interface CommitChanges {
@@ -37,7 +39,7 @@ interface ExtendedCommit extends GitCommitType {
   changes?: CommitChanges;
 }
 
-export default function GitHistory({ commits, currentProject, currentBranch, onFileOperation }: GitHistoryProps) {
+export default function GitHistory({ commits, currentProject, currentBranch, onFileOperation, onOpenDiffTab }: GitHistoryProps) {
   const [extendedCommits, setExtendedCommits] = useState<ExtendedCommit[]>([]);
   const [expandedCommits, setExpandedCommits] = useState<Set<string>>(new Set());
   const [commitChanges, setCommitChanges] = useState<Map<string, CommitChanges>>(new Map());
@@ -434,6 +436,35 @@ export default function GitHistory({ commits, currentProject, currentBranch, onF
                             <div key={index} className="flex items-center gap-2 text-xs py-0.5">
                               {getFileIcon(type)}
                               <span className="font-mono truncate flex-1" style={{ color: colors.gitCommitFile || colors.sidebarFg }}>{file}</span>
+                              <button
+                                className="underline text-xs text-blue-600 hover:text-blue-800 ml-2"
+                                style={{ cursor: 'pointer', background: 'none', border: 'none', padding: 0 }}
+                                onClick={async () => {
+                                  let originalContent = '';
+                                  let modifiedContent = '';
+                                  if (gitCommands) {
+                                    const currentCommit = commits.find(c => c.hash === commit.hash);
+                                    const parentHash = currentCommit?.parentHashes[0];
+                                    if (parentHash) {
+                                      try {
+                                        originalContent = await gitCommands.getFileContentAtCommit(file, parentHash);
+                                      } catch {}
+                                    }
+                                    try {
+                                      modifiedContent = await gitCommands.getFileContentAtCommit(file, commit.hash);
+                                    } catch {}
+                                  }
+                                  if (onOpenDiffTab) {
+                                    onOpenDiffTab({
+                                      id: `${commit.hash}-${file}`,
+                                      name: file,
+                                      type: 'file',
+                                      content: modifiedContent,
+                                      path: file
+                                    }, originalContent);
+                                  }
+                                }}
+                              >差分を見る</button>
                             </div>
                           ));
                         })()}

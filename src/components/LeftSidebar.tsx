@@ -83,6 +83,7 @@ export default function LeftSidebar({
                 gitRefreshTrigger={gitRefreshTrigger}
                 onFileOperation={onFileOperation}
                 onGitStatusChange={onGitStatusChange}
+                onOpenDiffTab={onDiffOpen}
               />
             </div>
           )}

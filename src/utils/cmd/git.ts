@@ -14,6 +14,19 @@ import { GitMergeOperations } from './gitOperations/merge';
  * isomorphic-gitを使用してブラウザ環境でGit操作を実現
  */
 export class GitCommands {
+  /**
+   * 指定ファイルの指定コミット時点の内容を取得
+   */
+  async getFileContentAtCommit(filepath: string, commitHash: string): Promise<string> {
+    await this.ensureGitRepository();
+    const cleanPath = filepath.replace(/^\//, '');
+    try {
+      const { blob } = await git.readBlob({ fs: this.fs, dir: this.dir, oid: commitHash, filepath: cleanPath });
+      return new TextDecoder().decode(blob);
+    } catch {
+      return '';
+    }
+  }
   private fs: FS;
   private dir: string;
   private onFileOperation?: (path: string, type: 'file' | 'folder' | 'delete', content?: string, isNodeRuntime?: boolean) => Promise<void>;

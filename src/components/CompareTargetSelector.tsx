@@ -25,7 +25,9 @@ const CompareTargetSelector: React.FC<CompareTargetSelectorProps> = ({
   const [showGitFileModal, setShowGitFileModal] = useState(false);
   // projectFilesからファイルリスト生成
   const fileOptions = candidateFiles ? candidateFiles.filter(f => f.type === 'file').map(f => f.path) : [];
-  const [selectedGitFile, setSelectedGitFile] = useState<string>(fileOptions[0] || '');
+  // originalFileNameがfileOptionsに含まれていればそれを初期値に
+  const initialGitFile = (originalFileName && fileOptions.includes(originalFileName)) ? originalFileName : (fileOptions[0] || '');
+  const [selectedGitFile, setSelectedGitFile] = useState<string>(initialGitFile);
   const [gitFileHistory, setGitFileHistory] = useState<{ commit: string; content: string }[]>([]);
 
   useEffect(() => {

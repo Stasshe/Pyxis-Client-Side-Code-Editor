@@ -7,6 +7,7 @@ import { GitBranch, GitCommit, RefreshCw, Plus, Check, X, GitMerge, Clock, User,
 import { GitRepository, GitCommit as GitCommitType, GitStatus } from '@/types/git';
 import { GitCommands } from '@/utils/cmd/git';
 import GitHistory from './GitHistory';
+import { FileItem } from '@/types';
 
 interface GitPanelProps {
   currentProject?: string;
@@ -14,9 +15,10 @@ interface GitPanelProps {
   gitRefreshTrigger?: number;
   onFileOperation?: (path: string, type: 'file' | 'folder' | 'delete', content?: string) => Promise<void>;
   onGitStatusChange?: (changesCount: number) => void; // Git変更状態のコールバック
+  onOpenDiffTab?: (file: FileItem) => void;
 }
 
-export default function GitPanel({ currentProject, onRefresh, gitRefreshTrigger, onFileOperation, onGitStatusChange }: GitPanelProps) {
+export default function GitPanel({ currentProject, onRefresh, gitRefreshTrigger, onFileOperation, onGitStatusChange, onOpenDiffTab }: GitPanelProps) {
   const { colors } = useTheme();
   const [gitRepo, setGitRepo] = useState<GitRepository | null>(null);
   const [commitMessage, setCommitMessage] = useState('');
@@ -684,6 +686,7 @@ export default function GitPanel({ currentProject, onRefresh, gitRefreshTrigger,
                 currentProject={currentProject}
                 currentBranch={gitRepo.currentBranch}
                 onFileOperation={onFileOperation}
+                onOpenDiffTab={onOpenDiffTab}
               />
             )}
           </div>
