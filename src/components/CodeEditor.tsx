@@ -1,11 +1,10 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import MarkdownPreviewTab from './MarkdownPreviewTab';
-import WelcomeTab from './WelcomeTab';
 import DiffTab from './DiffTab';
 import Editor, { Monaco } from '@monaco-editor/react';
 import { FileText } from 'lucide-react';
-import { Tab } from '../types';
+import { Tab, FileItem, Project } from '../types';
 import * as monaco from 'monaco-editor';
 
 interface CodeEditorProps {
@@ -14,9 +13,10 @@ interface CodeEditorProps {
   isBottomPanelVisible: boolean;
   onContentChange: (tabId: string, content: string) => void;
   onContentChangeImmediate?: (tabId: string, content: string) => void;
+  projectFiles: FileItem[];
+  currentProject: Project; // Project型推奨
   nodeRuntimeOperationInProgress?: boolean;
 }
-
 const getLanguage = (filename: string): string => {
   const ext = filename.toLowerCase();
   if (ext.endsWith('.tsx') || ext.endsWith('.ts')) return 'javascript';
@@ -37,6 +37,8 @@ const getLanguage = (filename: string): string => {
 
 export default function CodeEditor({
   activeTab,
+  currentProject,
+  projectFiles,
   bottomPanelHeight,
   isBottomPanelVisible,
   onContentChange,
@@ -47,6 +49,7 @@ export default function CodeEditor({
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [gitHistory, setGitHistory] = useState<Record<string, { commit: string; content: string }[]>>({});
 
   // 文字数カウント用 state
   const [charCount, setCharCount] = useState(0);
@@ -87,6 +90,8 @@ export default function CodeEditor({
       }
     };
   }, []);
+
+  
 
   const handleEditorDidMount = (editor: monaco.editor.IStandaloneCodeEditor, monaco: Monaco) => {
     editorRef.current = editor;
@@ -282,10 +287,33 @@ export default function CodeEditor({
     );
   }
 
-  // Diffタブの場合はDiffTabコンポーネントで表示
+
+  // Hooksは必ずトップレベルで宣言
+  // propsのcurrentProject, projectFilesはそのまま利用
+
+  useEffect(() => {
+    let isMounted = true;
+    async function fetchGitHistory() {
+      try {
+        const { GitCommands } = await import('@/utils/cmd/git');
+        const gitCommands = new GitCommands(currentProject.name);
+        const history: Record<string, { commit: string; content: string }[]> = {};
+        for (const file of projectFiles) {
+          history[file.path] = await gitCommands.getFileHistory(file.path);
+        }
+        if (isMounted) setGitHistory(history);
+      } catch (e) {
+        console.warn('gitHistory生成失敗:', e);
+        if (isMounted) setGitHistory({});
+      }
+    }
+    fetchGitHistory();
+    return () => { isMounted = false; };
+  }, [projectFiles, currentProject, activeTab.diff]);
+
+  
+
   if (activeTab.diff) {
-    // projectFilesはpage.tsxでwindowにセット済み
-    const projectFiles = (window as any).projectFiles || [];
     return (
       <div className="flex-1" style={{ height: editorHeight }}>
         <DiffTab
@@ -294,6 +322,7 @@ export default function CodeEditor({
           originalFileName={(activeTab as any).originalFileName || '保存済み'}
           modifiedFileName={(activeTab as any).modifiedFileName || '現在'}
           projectFiles={projectFiles}
+          gitHistory={gitHistory}
         />
       </div>
     );

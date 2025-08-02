@@ -10,6 +10,7 @@ interface DiffTabProps {
   originalFileName: string;
   modifiedFileName: string;
   projectFiles: FileItem[]; // FileItem型の階層構造
+  gitHistory?: Record<string, { commit: string; content: string }[]>;
 }
 
 const DiffTab: React.FC<DiffTabProps> = ({
@@ -17,7 +18,8 @@ const DiffTab: React.FC<DiffTabProps> = ({
   modifiedContent,
   originalFileName,
   modifiedFileName,
-  projectFiles
+  projectFiles,
+  gitHistory = {}
 }) => {
   const { colors } = useTheme();
   const [selectedContent, setSelectedContent] = useState(modifiedContent || '');
@@ -43,7 +45,7 @@ const DiffTab: React.FC<DiffTabProps> = ({
           originalFileName={originalFileName}
           originalContent={originalContent}
           candidateFiles={projectFiles}
-          // gitHistoryは親で用意して渡す必要あり
+          gitHistory={gitHistory}
           onSelect={(name, content) => {
             setSelectedContent(content);
             setSelectedName(name);

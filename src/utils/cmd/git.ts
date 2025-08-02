@@ -263,8 +263,34 @@ export class GitCommands {
   }
 
   // ========================================
+
+  // ========================================
   // ファイルの追加・コミット操作
   // ========================================
+
+  // ファイルごとのコミット履歴取得
+  async getFileHistory(filepath: string, depth = 20): Promise<Array<{ commit: string, content: string }>> {
+    await this.ensureGitRepository();
+    // 先頭スラッシュを除去（isomorphic-gitは相対パスのみ許容）
+    console.log( `Fetching history for ${filepath} with depth ${depth}`);
+    console.log(`Project directory: ${this.dir}, and ${filepath}`);
+    const cleanPath = filepath.replace(/^\//, '');
+    const logs = await git.log({ fs: this.fs, dir: this.dir, filepath: cleanPath, depth });
+    return await Promise.all(logs.map(async (entry) => {
+      const { oid, commit } = entry;
+      let content = '';
+      try {
+        const { blob } = await git.readBlob({ fs: this.fs, dir: this.dir, oid, filepath: cleanPath });
+        content = new TextDecoder().decode(blob);
+      } catch {
+        content = '';
+      }
+      return {
+        commit: `${oid.slice(0, 7)}: ${commit.message}`,
+        content
+      };
+    }));
+  }
 
   // git add - ファイルをステージング
   async add(filepath: string): Promise<string> {

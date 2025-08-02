@@ -15,7 +15,7 @@ import { useProject } from '@/utils/project';
 import { Project } from '@/types';
 import type { Tab,FileItem, MenuTab, EditorLayoutType, EditorPane } from '@/types';
 import FileSelectModal from '@/components/FileSelect';
-import { Terminal } from 'lucide-react';
+import { Terminal, FileText } from 'lucide-react';
 import { handleFileOperation } from '@/utils/handleFileOperation';
 
 
@@ -513,10 +513,13 @@ export default function Home() {
                   }
                   onAddTab={() => setFileSelectState({ open: true, paneIdx: idx })}
                 />
+                {activeTab ? (
                 <CodeEditor
                   activeTab={activeTab}
+                  currentProject={currentProject!}
+                  projectFiles={projectFiles}
                   onContentChange={async (tabId, content) => {
-                    // ローカル状態を更新
+                    // ...既存のonContentChangeロジック...
                     setEditors(prev => {
                       const updated = [...prev];
                       updated[idx] = {
@@ -525,26 +528,13 @@ export default function Home() {
                       };
                       return updated;
                     });
-                    
-                    // ファイルパスを取得 - 最新のエディタ状態を使用するために関数内で取得
                     setEditors(currentEditors => {
-                      // 現在のタブを見つける
                       const tab = currentEditors[idx].tabs.find(t => t.id === tabId);
-                      if (!tab || !currentProject) return currentEditors; // タブが見つからない場合は何もしない
-                      
-                      //const minPaneIdx = Math.min(...panesWithSameFile);
-
+                      if (!tab || !currentProject) return currentEditors;
                       (async () => {
                         try {
-                          console.log(`[Pane ${idx}] Saving file as minimum pane index:`, tab.path);
-                          // IndexedDBに保存
                           await saveFile(tab.path, content);
-                          console.log(`[Pane ${idx}] File saved to IndexedDB:`, tab.path);
-                          
-                          // 保存成功後、projectFilesを明示的に再取得
                           if (refreshProjectFiles) await refreshProjectFiles();
-                          
-                          // 全ペインの同じファイルタブのisDirtyをfalseに
                           setEditors(prevEditors => {
                             const targetPath = tab.path;
                             return prevEditors.map(pane => ({
@@ -554,8 +544,6 @@ export default function Home() {
                               )
                             }));
                           });
-                          
-                          // Git状態を更新
                           setTimeout(() => {
                             setGitRefreshTrigger(prev => prev + 1);
                           }, 200);
@@ -563,8 +551,6 @@ export default function Home() {
                           console.error(`[Pane ${idx}] Failed to save file:`, error);
                         }
                       })();
-                      
-                      // 元のエディタ状態を返す（setEditorsの中なので）
                       return currentEditors;
                     })
                   }}
@@ -573,6 +559,18 @@ export default function Home() {
                   bottomPanelHeight={bottomPanelHeight}
                   nodeRuntimeOperationInProgress={nodeRuntimeOperationInProgress}
                 />
+                ) : (
+                  <div className="flex-1" style={{ height: isBottomPanelVisible 
+                    ? `calc(100vh - 40px - ${bottomPanelHeight}px)` 
+                    : 'calc(100vh - 40px)' }}>
+                    <div className="h-full flex items-center justify-center text-muted-foreground">
+                      <div className="text-center">
+                        <FileText size={48} className="mx-auto mb-4 opacity-50" />
+                        <p>ファイルを選択してください</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
