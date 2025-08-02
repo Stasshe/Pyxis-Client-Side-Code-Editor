@@ -322,7 +322,7 @@ export default function CodeEditor({
           originalFileName={(activeTab as any).originalFileName || '保存済み'}
           modifiedFileName={(activeTab as any).modifiedFileName || '現在'}
           projectFiles={projectFiles}
-          gitHistory={gitHistory}
+          currentProject={typeof currentProject === 'string' ? currentProject : currentProject?.name}
         />
       </div>
     );

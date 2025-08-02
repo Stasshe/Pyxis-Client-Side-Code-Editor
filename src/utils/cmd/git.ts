@@ -677,3 +677,9 @@ export class GitCommands {
     }
   }
 }
+
+// GitCommands.getFileHistoryをラップしてexport
+export async function getFileHistory(filepath: string, projectName: string, depth = 20) {
+  const git = new GitCommands(projectName);
+  return await git.getFileHistory(filepath, depth);
+}

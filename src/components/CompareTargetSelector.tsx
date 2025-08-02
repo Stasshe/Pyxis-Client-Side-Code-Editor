@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { getFileHistory } from '@/utils/cmd/git';
 import FileSelectModal from './FileSelect';
 
 import type { FileItem } from '@/types';
@@ -7,7 +8,7 @@ interface CompareTargetSelectorProps {
   originalFileName: string;
   originalContent: string;
   candidateFiles?: FileItem[]; // FileTree用の階層構造
-  gitHistory?: Record<string, { commit: string; content: string }[]>;
+  currentProject: string;
   onSelect: (name: string, content: string) => void;
 }
 
@@ -15,7 +16,7 @@ const CompareTargetSelector: React.FC<CompareTargetSelectorProps> = ({
   originalFileName,
   originalContent,
   candidateFiles = [],
-  gitHistory = {},
+  currentProject,
   onSelect
 }) => {
   const [showFileModal, setShowFileModal] = useState(false);
@@ -24,6 +25,23 @@ const CompareTargetSelector: React.FC<CompareTargetSelectorProps> = ({
   // projectFilesからファイルリスト生成
   const fileOptions = candidateFiles ? candidateFiles.filter(f => f.type === 'file').map(f => f.path) : [];
   const [selectedGitFile, setSelectedGitFile] = useState<string>(fileOptions[0] || '');
+  const [gitFileHistory, setGitFileHistory] = useState<{ commit: string; content: string }[]>([]);
+
+  useEffect(() => {
+    if (!selectedGitFile || !currentProject) {
+      setGitFileHistory([]);
+      return;
+    }
+    // 履歴取得
+    (async () => {
+      try {
+        const history = await getFileHistory(selectedGitFile, currentProject);
+        setGitFileHistory(history || []);
+      } catch (e) {
+        setGitFileHistory([]);
+      }
+    })();
+  }, [selectedGitFile, currentProject]);
 
   return (
     <div className="flex flex-col gap-2">
@@ -70,12 +88,12 @@ const CompareTargetSelector: React.FC<CompareTargetSelectorProps> = ({
               />
             )}
             {/* コミットメッセージ一覧 */}
-            {(!gitHistory || !gitHistory[selectedGitFile] || gitHistory[selectedGitFile].length === 0) && <div className="text-xs text-muted-foreground">履歴がありません</div>}
-            {gitHistory && gitHistory[selectedGitFile] && (
+            {(gitFileHistory.length === 0) && <div className="text-xs text-muted-foreground">履歴がありません</div>}
+            {(gitFileHistory.length > 0) && (
               <div className="mb-2">
                 <div className="text-xs font-bold mb-1">コミット一覧</div>
                 <ul className="text-xs">
-                  {gitHistory[selectedGitFile].map((h, idx) => (
+                  {gitFileHistory.map((h, idx) => (
                     <li key={h.commit + '-' + idx} className="mb-1 flex items-center gap-2">
                       <span className="font-mono text-[11px] bg-muted px-1 rounded">{h.commit.slice(0,7)}</span>
                       <span>{h.commit}</span>
