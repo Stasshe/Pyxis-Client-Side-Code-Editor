@@ -10,12 +10,14 @@ interface FileTreeProps {
   items: FileItem[];
   onFileOpen: (file: FileItem) => void;
   onFilePreview?: (file: FileItem) => void;
+  onDiffOpen?: (file: FileItem) => void;
   level?: number;
   currentProjectName: string; // プロジェクト情報をオプションで受け取る
   onFileOperation?: (path: string, type: 'file' | 'folder' | 'delete', content?: string, isNodeRuntime?: boolean) => Promise<void>;
 }
-export default function FileTree({ items, onFileOpen, level = 0, onFilePreview, currentProjectName, onFileOperation }: FileTreeProps) {
+export default function FileTree({ items, onFileOpen, level = 0, onFilePreview, currentProjectName, onFileOperation, onDiffOpen }: FileTreeProps) {
   const { colors } = useTheme();
+  // onDiffOpenはpropsから受け取るので関数スコープで利用可能
   const [hoveredItemId, setHoveredItemId] = useState<string | null>(null);
   const [menuHoveredIdx, setMenuHoveredIdx] = useState<number | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
@@ -173,6 +175,7 @@ export default function FileTree({ items, onFileOpen, level = 0, onFilePreview, 
                 onFilePreview={onFilePreview}
                 currentProjectName={currentProjectName}
                 onFileOperation={onFileOperation}
+                onDiffOpen={onDiffOpen}
               />
             )}
           </div>
@@ -240,6 +243,7 @@ export default function FileTree({ items, onFileOpen, level = 0, onFilePreview, 
               : [
                   '開く',
                   contextMenu.item.type === 'file' && contextMenu.item.name.endsWith('.md') ? 'プレビューを開く' : null,
+                  contextMenu.item.type === 'file' ? '差分表示' : null,
                   'ダウンロード',
                   'インポート',
                   '削除',
@@ -271,6 +275,10 @@ export default function FileTree({ items, onFileOpen, level = 0, onFilePreview, 
                 onTouchEnd={() => setMenuHoveredIdx(null)}
                 onClick={async () => {
                   setContextMenu(null);
+                  if (label === '差分表示' && contextMenu.item && onDiffOpen) {
+                    onDiffOpen(contextMenu.item);
+                    return;
+                  }
                   if (label === 'ファイル作成') {
                     if (typeof onFileOperation === 'function') {
                       const fileName = prompt('新しいファイル名を入力してください:');

@@ -2,6 +2,7 @@ import { useRef, useEffect, useCallback, useState } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import MarkdownPreviewTab from './MarkdownPreviewTab';
 import WelcomeTab from './WelcomeTab';
+import DiffTab from './DiffTab';
 import Editor, { Monaco } from '@monaco-editor/react';
 import { FileText } from 'lucide-react';
 import { Tab } from '../types';
@@ -267,20 +268,6 @@ export default function CodeEditor({
     );
   }
 
-  // Welcomeタブの場合は専用コンポーネントで表示
-  if (activeTab.id === 'welcome') {
-    // README.mdの内容をパースしてプロジェクト名・説明を抽出
-    // 例: content = `# プロジェクト名\n\n説明...`
-    const lines = activeTab.content.split('\n');
-    const projectName = lines[0]?.replace(/^# /, '') || '';
-    const description = lines[2] || '';
-    return (
-      <div className="flex-1" style={{ height: editorHeight }}>
-        <WelcomeTab projectName={projectName} description={description} />
-      </div>
-    );
-  }
-
   console.log('[CodeEditor] Rendering editor for:', activeTab.name);
 
   // Markdownプレビュータブの場合は専用コンポーネントで表示
@@ -292,6 +279,28 @@ export default function CodeEditor({
           <MarkdownPreviewTab content={activeTab.content} fileName={activeTab.name} />
         </div>
       </>
+    );
+  }
+
+  // Diffタブの場合はDiffTabコンポーネントで表示
+  if (activeTab.diff) {
+    // 比較候補ファイルリストを取得（propsで渡す）
+    // projectFilesはグローバルで持っていないのでwindow経由で一時取得
+    let candidateFiles: { name: string; content: string }[] = [];
+    try {
+      // window.projectFilesはpage.tsxでグローバルにセットしておくと良い
+      candidateFiles = (window as any).projectFiles?.map((f: any) => ({ name: f.name, content: f.content || '' })) || [];
+    } catch {}
+    return (
+      <div className="flex-1" style={{ height: editorHeight }}>
+        <DiffTab
+          originalContent={(activeTab as any).originalContent || ''}
+          modifiedContent={(activeTab as any).modifiedContent || ''}
+          originalFileName={(activeTab as any).originalFileName || '保存済み'}
+          modifiedFileName={(activeTab as any).modifiedFileName || '現在'}
+          candidateFiles={candidateFiles}
+        />
+      </div>
     );
   }
 

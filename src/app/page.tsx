@@ -327,6 +327,10 @@ export default function Home() {
     setIsProjectModalOpen(true);
   };
 
+  // DiffTab用にprojectFilesをwindowにセット（グローバル参照用）
+  if (typeof window !== 'undefined') {
+    (window as any).projectFiles = projectFiles;
+  }
   return (
     <>
     <div
@@ -369,20 +373,17 @@ export default function Home() {
           activeMenuTab={activeMenuTab}
           leftSidebarWidth={leftSidebarWidth}
           files={projectFiles}
-          // !型アサーションビミョい
           currentProject={currentProject!}
           onFileOpen={handleFileOpen}
           onFilePreview={file => {
-            // Markdownプレビュータブとして開く
+            // ...既存のonFilePreviewロジック...
             const previewTabId = `preview-${file.path}`;
             setTabs(prevTabs => {
-              // 既存プレビュータブがあればアクティブ化
               const existing = prevTabs.find(tab => tab.id === previewTabId);
               if (existing) {
                 setActiveTabId(previewTabId);
                 return prevTabs;
               }
-              // 最新のファイル内容取得
               let fileToPreview = file;
               if (currentProject && projectFiles.length > 0) {
                 const latestFile = projectFiles.find(f => f.path === file.path);
@@ -390,28 +391,68 @@ export default function Home() {
                   fileToPreview = { ...file, content: latestFile.content };
                 }
               }
-              // プレビュータブ追加
               const newTab = {
                 id: previewTabId,
                 name: fileToPreview.name,
                 content: fileToPreview.content || '',
                 isDirty: false,
                 path: fileToPreview.path,
-                preview: true // プレビューフラグ
+                preview: true
               };
               setActiveTabId(previewTabId);
               return [...prevTabs, newTab];
             });
           }}
+          onDiffOpen={file => {
+            // 差分表示タブを現在アクティブなペインに追加（MarkdownPreviewTabと同じ構造に揃える）
+            setEditors(prevEditors => {
+              const activePaneIdx = prevEditors.findIndex(pane => pane.activeTabId);
+              const paneIdx = activePaneIdx !== -1 ? activePaneIdx : 0;
+              const updated = [...prevEditors];
+              const pane = updated[paneIdx];
+              const diffTabId = `diff-${file.path}`;
+              const savedFile = projectFiles.find(f => f.path === file.path);
+              const originalContent = savedFile ? savedFile.content || '' : '';
+              const editingTab = pane.tabs.find(t => t.path === file.path);
+              const modifiedContent = editingTab ? editingTab.content : '';
+              // 既存diffタブがあればアクティブ化
+              const existing = pane.tabs.find(tab => tab.id === diffTabId);
+              let newTabs;
+              let newActiveTabId;
+              if (existing) {
+                newTabs = pane.tabs;
+                newActiveTabId = existing.id;
+              } else {
+                const newTab: Tab = {
+                  id: diffTabId,
+                  name: `${file.name} (差分)`,
+                  content: '',
+                  isDirty: false,
+                  path: file.path,
+                  diff: true,
+                  originalContent,
+                  modifiedContent,
+                  originalFileName: file.name + ' (保存済み)',
+                  modifiedFileName: file.name + ' (現在)'
+                } as any;
+                newTabs = [...pane.tabs, newTab];
+                newActiveTabId = newTab.id;
+              }
+              updated[paneIdx] = {
+                ...pane,
+                tabs: newTabs,
+                activeTabId: newActiveTabId
+              };
+              return updated;
+            });
+          }}
           onResize={handleLeftResize}
           onGitRefresh={() => {
-            // Git操作後にプロジェクトを再読み込み
             if (currentProject && loadProject) {
               loadProject(currentProject);
             }
           }}
           gitRefreshTrigger={gitRefreshTrigger}
-          
           onGitStatusChange={setGitChangesCount}
           onFileOperation={async (path: string, type: 'file' | 'folder' | 'delete', content?: string, isNodeRuntime?: boolean) => {
             if (isNodeRuntime) {
@@ -422,7 +463,7 @@ export default function Home() {
             }
             setGitRefreshTrigger(prev => prev + 1);
           }}
-          />
+        />
       )}
 
   <div className="flex-1 flex flex-col overflow-hidden min-h-0">

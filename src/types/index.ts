@@ -14,6 +14,7 @@ export interface Tab {
   isDirty: boolean;
   path: string;
   preview?: boolean;
+  diff?: boolean; // 差分表示タブ用フラグ
 }
 
 // VSCode風ウィンドウ分割用エディタペイン型
