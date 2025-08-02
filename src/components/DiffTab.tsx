@@ -24,7 +24,6 @@ const DiffTab: React.FC<DiffTabProps> = ({
   const { colors } = useTheme();
   const [selectedContent, setSelectedContent] = useState(modifiedContent || '');
   const [selectedName, setSelectedName] = useState(modifiedFileName || '');
-  const showSelectUI = !selectedContent;
 
   // projectFilesをpropsで受け取る前提（FileItem型の階層構造）
   // candidateFilesにはprojectFilesをそのまま渡す

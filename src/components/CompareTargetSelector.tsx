@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTheme } from '@/context/ThemeContext';
 import { getFileHistory } from '@/utils/cmd/git';
 import FileSelectModal from './FileSelect';
 
@@ -43,13 +44,30 @@ const CompareTargetSelector: React.FC<CompareTargetSelectorProps> = ({
     })();
   }, [selectedGitFile, currentProject]);
 
+  const { colors } = useTheme();
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-3">
       <div className="flex gap-2">
-        <button className="px-2 py-1 rounded bg-accent text-white text-xs" onClick={() => setShowFileModal(true)}>
+        <button
+          className="px-3 py-1 rounded text-xs font-semibold"
+          style={{
+            background: colors.accentBg,
+            color: colors.accentFg,
+            border: `1px solid ${colors.border}`,
+          }}
+          onClick={() => setShowFileModal(true)}
+        >
           ファイルツリーから選択
         </button>
-        <button className="px-2 py-1 rounded bg-primary text-white text-xs" onClick={() => setShowGitPanel(true)}>
+        <button
+          className="px-3 py-1 rounded text-xs font-semibold"
+          style={{
+            background: colors.primary,
+            color: colors.background,
+            border: `1px solid ${colors.border}`,
+          }}
+          onClick={() => setShowGitPanel(true)}
+        >
           Git履歴から選択
         </button>
       </div>
@@ -67,12 +85,32 @@ const CompareTargetSelector: React.FC<CompareTargetSelectorProps> = ({
       )}
       {/* Git履歴パネル（FileSelectModalでファイル選択＋コミットメッセージ一覧） */}
       {showGitPanel && (
-        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-          <div className="bg-white rounded shadow-lg p-4 min-w-[340px] max-h-[70vh] overflow-auto">
-            <div className="font-bold mb-2">Git履歴（{selectedGitFile}）</div>
-            <div className="mb-2 flex gap-2 items-center">
-              <span className="text-xs">ファイル選択：</span>
-              <button className="px-2 py-1 rounded bg-accent text-white text-xs" onClick={() => setShowGitFileModal(true)}>
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50"
+          style={{ background: colors.background + 'CC' }} // 80%透明度
+        >
+          <div
+            className="rounded shadow-lg p-5 min-w-[340px] max-h-[70vh] overflow-auto border"
+            style={{
+              background: colors.cardBg,
+              color: colors.foreground,
+              borderColor: colors.border,
+            }}
+          >
+            <div className="font-bold mb-3 text-base" style={{ color: colors.primary }}>
+              Git履歴（{selectedGitFile}）
+            </div>
+            <div className="mb-3 flex gap-2 items-center">
+              <span className="text-xs" style={{ color: colors.mutedFg }}>ファイル選択：</span>
+              <button
+                className="px-2 py-1 rounded text-xs font-semibold"
+                style={{
+                  background: colors.accentBg,
+                  color: colors.accentFg,
+                  border: `1px solid ${colors.border}`,
+                }}
+                onClick={() => setShowGitFileModal(true)}
+              >
                 ファイルツリーから選択
               </button>
             </div>
@@ -88,16 +126,37 @@ const CompareTargetSelector: React.FC<CompareTargetSelectorProps> = ({
               />
             )}
             {/* コミットメッセージ一覧 */}
-            {(gitFileHistory.length === 0) && <div className="text-xs text-muted-foreground">履歴がありません</div>}
+            {(gitFileHistory.length === 0) && (
+              <div className="text-xs mb-2" style={{ color: colors.mutedFg }}>
+                履歴がありません
+              </div>
+            )}
             {(gitFileHistory.length > 0) && (
               <div className="mb-2">
-                <div className="text-xs font-bold mb-1">コミット一覧</div>
+                <div className="text-xs font-bold mb-1" style={{ color: colors.accentFg }}>
+                  コミット一覧
+                </div>
                 <ul className="text-xs">
                   {gitFileHistory.map((h, idx) => (
                     <li key={h.commit + '-' + idx} className="mb-1 flex items-center gap-2">
-                      <span className="font-mono text-[11px] bg-muted px-1 rounded">{h.commit.slice(0,7)}</span>
-                      <span>{h.commit}</span>
-                      <button className="px-2 py-0.5 bg-primary text-white rounded text-xs" onClick={() => { onSelect(h.commit, h.content); setShowGitPanel(false); }}>
+                      <span
+                        className="font-mono text-[11px] px-1 rounded"
+                        style={{ background: colors.mutedBg, color: colors.primary }}
+                      >
+                        {h.commit.slice(0,7)}
+                      </span>
+                      <span style={{ color: colors.foreground }}>
+                        {h.commit.length > 30 ? h.commit.slice(0, 30) + '...' : h.commit}
+                      </span>
+                      <button
+                        className="px-2 py-0.5 rounded text-xs font-semibold"
+                        style={{
+                          background: colors.primary,
+                          color: colors.background,
+                          border: `1px solid ${colors.border}`,
+                        }}
+                        onClick={() => { onSelect(h.commit, h.content); setShowGitPanel(false); }}
+                      >
                         この内容と比較
                       </button>
                     </li>
@@ -105,7 +164,17 @@ const CompareTargetSelector: React.FC<CompareTargetSelectorProps> = ({
                 </ul>
               </div>
             )}
-            <button className="mt-2 px-3 py-1 bg-accent text-white rounded" onClick={() => setShowGitPanel(false)}>閉じる</button>
+            <button
+              className="mt-2 px-3 py-1 rounded font-semibold"
+              style={{
+                background: colors.accentBg,
+                color: colors.accentFg,
+                border: `1px solid ${colors.border}`,
+              }}
+              onClick={() => setShowGitPanel(false)}
+            >
+              閉じる
+            </button>
           </div>
         </div>
       )}
