@@ -7,6 +7,7 @@ import SearchPanel from './SearchPanel';
 import GitPanel from './GitPanel';
 import RunPanel from './RunPanel';
 import SettingsPanel from './SettingsPanel';
+import MathPanel from './MathPanel/MathPanel';
 
 interface LeftSidebarProps {
   activeMenuTab: MenuTab;
@@ -68,6 +69,7 @@ export default function LeftSidebar({
             {activeMenuTab === 'search' && '検索'}
             {activeMenuTab === 'git' && 'ソース管理'}
             {activeMenuTab === 'run' && '実行'}
+            {activeMenuTab === 'math' && '数学'}
             {activeMenuTab === 'settings' && '設定'}
           </span>
         </div>
@@ -145,6 +147,11 @@ export default function LeftSidebar({
                 files={files}
                 onFileOperation={onFileOperation}
               />
+            </div>
+          )}
+          {activeMenuTab === 'math' && (
+            <div className="h-full">
+              <MathPanel onFileOperation={onFileOperation} />
             </div>
           )}
           {activeMenuTab === 'settings' && (

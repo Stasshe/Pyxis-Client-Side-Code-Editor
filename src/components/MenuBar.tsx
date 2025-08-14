@@ -1,4 +1,4 @@
-import { FileText, Search, GitBranch, Settings, FolderOpen, Play } from 'lucide-react';
+import { FileText, Search, GitBranch, Settings, FolderOpen, Play, Sigma } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import clsx from 'clsx';
 import { MenuTab } from '../types';
@@ -25,12 +25,13 @@ export default function MenuBar({ activeMenuTab, onMenuTabClick, onProjectClick,
     }}>
       {/* 上部のメニューボタン */}
       <div style={{ display: 'flex', flexDirection: 'column' }}>
-        {['files', 'search', 'git', 'run', 'settings'].map(tab => {
+        {['files', 'search', 'git', 'run', 'math', 'settings'].map(tab => {
           const Icon = tab === 'files' ? FileText
             : tab === 'search' ? Search
               : tab === 'git' ? GitBranch
                 : tab === 'run' ? Play
-                  : Settings;
+                  : tab === 'math' ? Sigma
+                    : Settings;
           const isActive = activeMenuTab === tab;
           return (
             <button
@@ -48,7 +49,7 @@ export default function MenuBar({ activeMenuTab, onMenuTabClick, onProjectClick,
                 cursor: 'pointer',
               }}
               onClick={() => onMenuTabClick(tab as MenuTab)}
-              title={tab === 'files' ? 'ファイル' : tab === 'search' ? '検索' : tab === 'git' ? 'Git' : tab === 'run' ? '実行' : '設定'}
+              title={tab === 'files' ? 'ファイル' : tab === 'search' ? '検索' : tab === 'git' ? 'Git' : tab === 'run' ? '実行' : tab === 'math' ? '数学' : '設定'}
             >
               <Icon size={20} />
               {tab === 'git' && gitChangesCount > 0 && (

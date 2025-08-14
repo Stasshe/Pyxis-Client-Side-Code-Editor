@@ -77,7 +77,7 @@ export interface ProjectFile {
   aiAgentCode?: string; // AIが提案するコード
 }
 
-export type MenuTab = 'files' | 'search' | 'git' | 'settings' | 'run';
+export type MenuTab = 'files' | 'search' | 'git' | 'settings' | 'run' | 'math';
 
 // AI Agent関連の型定義
 export interface AIMessage {
