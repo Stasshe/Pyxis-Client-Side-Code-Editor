@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import { GraphFunction, MathVariable } from '@/types/math';
+import { create, all } from 'mathjs';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -12,7 +13,12 @@ import {
   Legend,
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
-//import zoomPlugin from 'chartjs-plugin-zoom';
+
+// MathJSの設定
+const math = create(all, {
+  number: 'number',
+  precision: 64
+});
 
 // Chart.jsの登録
 ChartJS.register(
@@ -41,49 +47,29 @@ export default function GraphArea({ functions, variables }: GraphAreaProps) {
     const step = (domain[1] - domain[0]) / 1000; // 1000ポイント
     
     try {
-      // 動的にAlgebriteを使って関数を評価
+      // MathJSを使って関数を評価
       for (let x = domain[0]; x <= domain[1]; x += step) {
         try {
-          // 変数を置換して式を評価
-          let expression = func.expression;
+          // 変数スコープを作成
+          const scope: any = { x };
           
-          // 変数を数値に置換
+          // 他の変数を追加
           variables.forEach((variable, name) => {
             if (name !== 'x' && name !== 'y' && typeof variable.value === 'number') {
-              expression = expression.replace(new RegExp(`\\b${name}\\b`, 'g'), variable.value.toString());
+              scope[name] = variable.value;
             }
           });
           
-          // xを具体的な値に置換
-          expression = expression.replace(/\bx\b/g, x.toString());
+          // MathJSで安全に計算
+          const y = math.evaluate(func.expression, scope);
           
-          // 簡単な数式評価（eval使用 - 本来はより安全な方法を推奨）
-          let y: number;
-          try {
-            // 基本的な数学関数を置換
-            const evalExpression = expression
-              .replace(/\bsin\b/g, 'Math.sin')
-              .replace(/\bcos\b/g, 'Math.cos')
-              .replace(/\btan\b/g, 'Math.tan')
-              .replace(/\blog\b/g, 'Math.log')
-              .replace(/\bexp\b/g, 'Math.exp')
-              .replace(/\bsqrt\b/g, 'Math.sqrt')
-              .replace(/\babs\b/g, 'Math.abs')
-              .replace(/\bpi\b/g, 'Math.PI')
-              .replace(/\be\b/g, 'Math.E')
-              .replace(/\*\*/g, '**'); // べき乗
-            
-            y = eval(evalExpression);
-            
-            // 有限な値のみ追加
-            if (isFinite(y)) {
-              points.push({ x, y });
-            }
-          } catch {
-            // 計算エラーは無視
+          // 有限な値のみ追加
+          if (isFinite(y) && typeof y === 'number') {
+            points.push({ x, y });
           }
-        } catch {
+        } catch (error) {
           // 個別のポイント計算エラーは無視
+          //console.debug(`Point calculation error at x=${x}:`, error);
         }
       }
     } catch (error) {
@@ -148,11 +134,14 @@ export default function GraphArea({ functions, variables }: GraphAreaProps) {
         zoom: {
           wheel: {
             enabled: true,
+            speed: 0.05, // ズーム速度を調整
           },
           pinch: {
-            enabled: true
+            enabled: true,
+            threshold: 2, // ピンチの閾値を調整
           },
           mode: 'xy' as const,
+          scaleMode: 'xy' as const, // スケールモードを明示
           onZoomComplete: function(chart: any) {
             const xScale = chart.scales.x;
             const yScale = chart.scales.y;
@@ -163,18 +152,34 @@ export default function GraphArea({ functions, variables }: GraphAreaProps) {
         pan: {
           enabled: true,
           mode: 'xy' as const,
+          threshold: 1, // パンの感度を調整
           onPanComplete: function(chart: any) {
             const xScale = chart.scales.x;
             const yScale = chart.scales.y;
             setDomain([xScale.min, xScale.max]);
             setRange([yScale.min, yScale.max]);
           }
+        },
+        limits: {
+          x: {min: -1000, max: 1000},
+          y: {min: -1000, max: 1000}
         }
       }
     },
     interaction: {
       intersect: false,
       mode: 'index' as const,
+    },
+    elements: {
+      point: {
+        radius: 0,
+        hoverRadius: 6,
+        hitRadius: 15, // タッチに優しいサイズ
+      },
+      line: {
+        tension: 0,
+        borderWidth: 2,
+      }
     },
     scales: {
       x: {
@@ -211,7 +216,10 @@ export default function GraphArea({ functions, variables }: GraphAreaProps) {
         }
       }
     },
+    aspectRatio: 1, // 1:1の比率を強制
     onHover: (event: any, elements: any[]) => {
+      // タッチデバイスではホバーカーソル変更を無効化
+      if ('ontouchstart' in window) return;
       event.native.target.style.cursor = elements.length > 0 ? 'crosshair' : 'default';
     }
   };
