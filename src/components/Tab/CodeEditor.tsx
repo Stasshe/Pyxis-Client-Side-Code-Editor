@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, useState, useContext } from 'react';
+import { useRef, useEffect, useCallback, useState, useContext, useMemo } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import MarkdownPreviewTab from './MarkdownPreviewTab';
 import WelcomeTab from './WelcomeTab';
@@ -44,11 +44,12 @@ interface CodeEditorProps {
   bottomPanelHeight: number;
   isBottomPanelVisible: boolean;
   onContentChange: (tabId: string, content: string) => void;
-  onContentChangeImmediate?: (tabId: string, content: string) => void;
+  wordWrapConfig: 'on' | 'off';
+  onContentChangeImmediate: (tabId: string, content: string) => void;
   nodeRuntimeOperationInProgress?: boolean;
   isCodeMirror?: boolean;
   currentProjectName?: string;
-  projectFiles?: any[]; // FileItem[]
+  projectFiles?: any[]; // FileItem[];
 }
 
 const getLanguage = (filename: string): string => {
@@ -143,7 +144,8 @@ export default function CodeEditor({
   nodeRuntimeOperationInProgress = false,
   isCodeMirror = false,
   currentProjectName,
-  projectFiles
+  projectFiles,
+  wordWrapConfig
 }: CodeEditorProps) {
   const { colors } = useTheme();
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
@@ -227,6 +229,15 @@ export default function CodeEditor({
 
     // テーマ定義（初回のみ）
     try {
+      Promise.all([
+        fetch('https://unpkg.com/@types/react/index.d.ts').then(r => r.text()),
+        fetch('https://unpkg.com/@types/react-dom/index.d.ts').then(r => r.text())
+      ]).then(([reactTypes, reactDomTypes]) => {
+        monaco.languages.typescript.typescriptDefaults.addExtraLib(reactTypes, 'file:///node_modules/@types/react/index.d.ts');
+        monaco.languages.typescript.typescriptDefaults.addExtraLib(reactDomTypes, 'file:///node_modules/@types/react-dom/index.d.ts');
+      }).catch(e => {
+        console.warn('[CodeEditor] Failed to load React type definitions:', e);
+      });
       monaco.editor.defineTheme('pyxis-custom', {
         base: 'vs-dark',
         inherit: true,
@@ -491,10 +502,21 @@ export default function CodeEditor({
 
     const monacoModelMap = monacoModelMapRef.current;
     const model = monacoModelMap.get(activeTab.id);
-    
-    if (isModelSafe(model) && 
-        currentModelIdRef.current === activeTab.id &&
-        model!.getValue() !== activeTab.content) {
+
+    // 既に同じ内容なら何もしない（保存時の再レンダリング防止）
+    if (
+      isModelSafe(model) &&
+      currentModelIdRef.current === activeTab.id &&
+      model!.getValue() === activeTab.content
+    ) {
+      return;
+    }
+
+    if (
+      isModelSafe(model) &&
+      currentModelIdRef.current === activeTab.id &&
+      model!.getValue() !== activeTab.content
+    ) {
       try {
         // 強制的にコンテンツを同期する（ユーザーの変更は絶対に反映する）
         model!.setValue(activeTab.content);
@@ -509,14 +531,12 @@ export default function CodeEditor({
         } catch (disposeError) {
           console.warn('[CodeEditor] Failed to dispose model during sync:', disposeError);
         }
-        
         try {
           const newModel = monacoRef.current!.editor.createModel(
             activeTab.content,
             getLanguage(activeTab.name)
           );
           monacoModelMap.set(activeTab.id, newModel);
-          
           if (isEditorSafe()) {
             editorRef.current!.setModel(newModel);
             currentModelIdRef.current = activeTab.id;
@@ -684,7 +704,7 @@ export default function CodeEditor({
               maxColumn: 120,
               showSlider: 'always'
             },
-            wordWrap: 'on',
+            wordWrap: wordWrapConfig,
             tabSize: 2,
             insertSpaces: true,
             formatOnPaste: true,

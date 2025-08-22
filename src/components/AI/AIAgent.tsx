@@ -105,6 +105,7 @@ export default function AIAgent({
       //   type: f.type
       // })));
       const contexts = buildAIFileContextList(projectFiles);
+      // console.log('[AIAgent] Built contexts:', contexts.length, contexts.map(c => c.path));
       updateFileContexts(contexts);
     }
   }, [projectFiles]); // projectFiles全体に依存し、内容変更も検知
@@ -173,8 +174,25 @@ export default function AIAgent({
 
   // ファイル選択
   const handleFileSelect = (file: FileItem) => {
-    toggleFileSelection(file.path);
-    setIsFileSelectorOpen(false);
+    // ファイルがfileContextsに存在しない場合は追加
+    const existingContext = fileContexts.find(ctx => ctx.path === file.path);
+    if (!existingContext && file.type === 'file' && file.content) {
+      const newContext = {
+        path: file.path,
+        name: file.name,
+        content: file.content,
+        selected: true // 新しく追加したファイルは選択状態にする
+      };
+      // updateFileContextsを使用するが、循環参照を避けるためselectedFilesは更新しない
+      const newContexts = [...fileContexts, newContext];
+      updateFileContexts(newContexts);
+    } else if (existingContext) {
+      // 既存のファイルの選択状態を切り替え
+      toggleFileSelection(file.path);
+    }
+    
+    // FileSelectorコンポーネントで既にonCloseが呼ばれるため、ここでは閉じない
+    // setIsFileSelectorOpen(false);
   };
 
   // レビューを開く
@@ -282,7 +300,7 @@ export default function AIAgent({
       >
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1">
-            <div 
+            <div
               className="w-2 h-2 rounded-full"
               style={{ background: colors.accent }}
             ></div>
@@ -369,7 +387,7 @@ export default function AIAgent({
             <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2" style={{ background: colors.background }}>
               {messages.length === 0 ? (
                 <div
-                  className="flex flex-col items-center justify-center h-full text-center"
+                  className="flex flex-col items-center justify-center h-full text-center select-none"
                   style={{ color: colors.mutedFg }}
                 >
                   <svg className="w-8 h-8 mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -424,7 +442,7 @@ export default function AIAgent({
                 </div>
               ) : messages.length === 0 ? (
                 <div
-                  className="flex flex-col items-center justify-center h-full text-center"
+                  className="flex flex-col items-center justify-center h-full text-center select-none"
                   style={{ color: colors.mutedFg }}
                 >
                   <svg className="w-8 h-8 mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">

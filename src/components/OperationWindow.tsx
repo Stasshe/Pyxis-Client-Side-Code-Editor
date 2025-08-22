@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { FileItem } from '@/types';
+import { FileItem, EditorPane } from '@/types';
 import { useTheme } from '@/context/ThemeContext';
-import { openFile } from '@/utils/openTab';
+import { handleFileSelect } from '@/hooks/fileSelectHandlers';
+import { flattenPanes } from '@/hooks/pane';
 
 // FileItem[]を平坦化する関数（tab.tsと同じ実装）
 function flattenFileItems(items: FileItem[]): FileItem[] {
@@ -26,26 +27,64 @@ interface OperationWindowProps {
   isVisible: boolean;
   onClose: () => void;
   projectFiles: FileItem[];
-  tabs: any[];
-  setTabs: (tabs: any[]) => void;
-  setActiveTabId: (id: string) => void;
   onFileSelect?: (file: FileItem) => void;
+  editors: EditorPane[];
+  setEditors: React.Dispatch<React.SetStateAction<EditorPane[]>>;
+  setFileSelectState: (state: { open: boolean; paneIdx: number | null }) => void;
+  currentPaneIndex?: number | null; // 現在のペインインデックス
+  aiMode?: boolean; // AI用モード（ファイルをタブで開かない）
 }
 
 export default function OperationWindow({
   isVisible,
   onClose,
   projectFiles,
-  tabs,
-  setTabs,
-  setActiveTabId,
-  onFileSelect
+  onFileSelect,
+  editors,
+  setEditors,
+  setFileSelectState,
+  currentPaneIndex,
+  aiMode = false
 }: OperationWindowProps) {
   const { colors } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  
+  // ファイル選択ハンドラ
+  const handleFileSelectInOperation = (file: FileItem) => {
+    if (aiMode) {
+      // AIモードの場合は、ファイルをタブで開かずにonFileSelectのみ呼び出し
+      if (onFileSelect) {
+        onFileSelect(file);
+      }
+      // AIモードでは必ずウィンドウを閉じる
+      onClose();
+      return;
+    }
+
+    // 通常モードの場合は、ファイルをタブで開く
+    const flatPanes = flattenPanes(editors);
+    
+    if (flatPanes.length === 0) return;
+    
+    // 指定されたペインインデックスを使用（未指定の場合は最初のペイン）
+    const paneIdx = currentPaneIndex ?? 0;
+    
+    // ファイルを直接開く（OperationWindowからのファイル選択）
+    handleFileSelect({
+      file,
+      fileSelectState: { open: true, paneIdx },
+      currentProject: null,
+      projectFiles,
+      editors,
+      setEditors
+    });
+    
+    // OperationWindowを閉じる
+    onClose();
+  };
 
   // 検索ロジック（ファイル名・フォルダ名・パスのいずれかに一致）
   const allFiles = flattenFileItems(projectFiles).filter(file => file.type === 'file' && !file.path.includes('node_modules/'));
@@ -111,9 +150,8 @@ export default function OperationWindow({
         case 'Enter':
           e.preventDefault();
           if (filteredFiles[selectedIndex]) {
-            openFile(filteredFiles[selectedIndex], tabs, setTabs, setActiveTabId);
-            if (onFileSelect) onFileSelect(filteredFiles[selectedIndex]);
-            onClose();
+            // ファイル選択ハンドラを呼び出し
+            handleFileSelectInOperation(filteredFiles[selectedIndex]);
           }
           break;
       }
@@ -130,7 +168,7 @@ export default function OperationWindow({
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isVisible, filteredFiles, selectedIndex, tabs, setTabs, setActiveTabId, onClose]);
+  }, [isVisible, filteredFiles, selectedIndex, onClose, editors, setEditors, setFileSelectState]);
 
   // 検索クエリが変更されたときに選択インデックスをリセット
   useEffect(() => {
@@ -257,9 +295,8 @@ export default function OperationWindow({
                     boxShadow: index === selectedIndex ? '0 0 0 2px rgba(0,0,0,0.08)' : undefined,
                   }}
                   onClick={() => {
-                    openFile(file, tabs, setTabs, setActiveTabId);
-                    if (onFileSelect) onFileSelect(file);
-                    onClose();
+                    // ファイル選択ハンドラを呼び出し
+                    handleFileSelectInOperation(file);
                   }}
                   onMouseEnter={() => setSelectedIndex(index)}
                 >

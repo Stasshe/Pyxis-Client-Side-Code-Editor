@@ -1,10 +1,9 @@
-// 編集依頼・チャット入力フォーム
-
 'use client';
 
 import React, { useState, KeyboardEvent, useEffect } from 'react';
 import { useTheme } from '@/context/ThemeContext';
 import { useInputHistory } from '@/hooks/useInputHistory';
+import { Send } from 'lucide-react';
 
 interface EditRequestFormProps {
   mode: 'chat' | 'edit';
@@ -57,7 +56,7 @@ export default function EditRequestForm({
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     // Ctrl+Enterで送信
-    if (e.key === 'Enter' && e.ctrlKey) {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault();
       handleSubmit();
     }
@@ -99,7 +98,7 @@ export default function EditRequestForm({
 
   return (
     <div 
-      className="p-2 border-t"
+      className="p-2 border-t select-none"
       style={{ borderColor: colors.border }}
     >
       <div className="flex flex-col gap-1.5">
@@ -133,16 +132,6 @@ export default function EditRequestForm({
               <span className="flex items-center gap-1">
                 <span>|</span>
                 <span>Alt+↑↓: 履歴</span>
-                {(canGoBack || canGoForward) && (
-                  <span className="flex items-center gap-0.5">
-                    <span 
-                      className={`w-1 h-1 rounded-full ${canGoBack ? 'bg-current' : 'bg-gray-400'}`}
-                    ></span>
-                    <span 
-                      className={`w-1 h-1 rounded-full ${canGoForward ? 'bg-current' : 'bg-gray-400'}`}
-                    ></span>
-                  </span>
-                )}
               </span>
             )}
           </div>
@@ -154,8 +143,7 @@ export default function EditRequestForm({
               !input.trim() || isProcessing ? 'opacity-50 cursor-not-allowed' : 'hover:opacity-90'
             }`}
             style={{
-              background: colors.accent,
-              color: colors.background
+              background: colors.accent
             }}
           >
             {isProcessing ? (
@@ -167,7 +155,7 @@ export default function EditRequestForm({
                 処理中...
               </div>
             ) : (
-              mode === 'edit' ? '実行' : '送信'
+              <Send size={16} />
             )}
           </button>
         </div>
